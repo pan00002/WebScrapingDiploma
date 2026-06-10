@@ -41,3 +41,14 @@ def get_all_posts(vk, owner_id: int, limit: int = 100) -> List[Dict]:
             logger.error(f"VK API ошибка wall.get {owner_id}: {e}")
             break
     return all_posts[:limit]
+
+async def get_group_photo_by_id(vk, owner_id: int) -> str:
+    """Получает URL аватарки сообщества по его owner_id (отрицательному)."""
+    try:
+        group_id = abs(owner_id)
+        response = vk.groups.getById(group_id=group_id, fields='photo_100', v='5.199')
+        if response and len(response) > 0:
+            return response[0].get('photo_100', '')
+    except Exception as e:
+        print(f"Ошибка получения фото группы {owner_id}: {e}")
+    return ""

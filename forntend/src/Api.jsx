@@ -24,3 +24,30 @@ export const getTaskStatus = async (taskId) => {
     const response = await axios.get(`${API_BASE}/task/${taskId}`);
     return response.data;
 };
+
+export const okSearch = async (keywords, urls, config = {}) => {
+    const response = await axios.post(`${API_BASE}/ok_search`, {
+        keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
+        sites: urls.split('\n').map(s => s.trim()).filter(s => s),
+        config: { context_window: config.contextWindow || 150 }
+    });
+    return response.data;
+};
+
+export const rutubeSearch = async (keywords, config = {}) => {
+    const response = await axios.post(`${API_BASE}/rutube_search`, {
+        keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
+        sites: [],
+        config: { context_window: config.contextWindow || 150 }
+    });
+    return response.data;
+};
+
+export const vkSearchByKeyword = async (keywords, maxGroups = 10, config = {}) => {
+    const response = await axios.post(`${API_BASE}/vk_search_by_keyword`, {
+        keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
+        sites: [],
+        config: { ...config, max_groups: maxGroups }
+    });
+    return response.data;
+};

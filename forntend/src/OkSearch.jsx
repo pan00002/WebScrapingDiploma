@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
-import { startSearch, getTaskStatus } from './api';
-import VkSearch from './VkSearch';
-import OkSearch from './OkSearch';
-import RutubeSearch from './RutubeSearch';
-import VkAutoSearch from './VkAutoSearch';
-import VkGroupFinder from './VkGroupFinder';
-function App() {
+import { okSearch, getTaskStatus } from './api';
+
+export default function OkSearch() {
     const [keywords, setKeywords] = useState('');
-    const [sites, setSites] = useState('');
+    const [groups, setGroups] = useState('');
     const [loading, setLoading] = useState(false);
+    const [taskId, setTaskId] = useState(null);
     const [results, setResults] = useState([]);
     const [progress, setProgress] = useState({ total: 0, processed: 0, found: 0 });
-    const [taskId, setTaskId] = useState(null);
 
     const startPolling = (id) => {
         const interval = setInterval(async () => {
@@ -37,43 +33,43 @@ function App() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!keywords.trim() || !sites.trim()) {
-            alert('Введите ключевые слова и URL сайтов');
+        if (!keywords.trim() || !groups.trim()) {
+            alert('Введите ключевые слова и ссылки на группы');
             return;
         }
         setLoading(true);
         setResults([]);
         try {
-            const task = await startSearch(keywords, sites);
+            const task = await okSearch(keywords, groups);
             setTaskId(task.task_id);
             startPolling(task.task_id);
         } catch (err) {
             console.error(err);
-            alert('Ошибка запуска поиска');
+            alert('Ошибка запуска поиска OK');
             setLoading(false);
         }
     };
 
     return (
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
-            <h1>Веб-скрепер</h1>
+        <div style={{ marginTop: '2rem', borderTop: '1px solid #ccc', paddingTop: '2rem' }}>
+            <h2>Поиск по группам Одноклассников</h2>
             <form onSubmit={handleSubmit}>
                 <div>
                     <label>Ключевые слова (через запятую)</label>
                     <textarea rows="2" value={keywords} onChange={e => setKeywords(e.target.value)} style={{ width: '100%' }} />
                 </div>
                 <div>
-                    <label>Сайты (по одному на строку, с http:// или https://)</label>
-                    <textarea rows="5" value={sites} onChange={e => setSites(e.target.value)} placeholder="https://example.com" style={{ width: '100%' }} />
+                    <label>Ссылки на группы (по одной на строку)</label>
+                    <textarea rows="4" value={groups} onChange={e => setGroups(e.target.value)} placeholder="https://ok.ru/group/123456789&#10;https://ok.ru/group/987654321" style={{ width: '100%' }} />
                 </div>
-                <button type="submit" disabled={loading}>
-                    {loading ? 'Поиск...' : 'Искать на сайтах'}
+                <button type="submit" disabled={loading} style={{ marginTop: '1rem' }}>
+                    {loading ? 'Поиск...' : 'Искать в OK'}
                 </button>
             </form>
             {taskId && (
                 <div>
                     <p>Задача: {taskId}</p>
-                    <p>Прогресс: {progress.processed} / {progress.total} страниц, найдено: {progress.found}</p>
+                    <p>Прогресс: {progress.processed} / {progress.total} групп, найдено: {progress.found}</p>
                 </div>
             )}
             {results.length > 0 && (
@@ -81,18 +77,13 @@ function App() {
                     <h3>Результаты ({results.length})</h3>
                     {results.map((res, idx) => (
                         <div key={idx} style={{ border: '1px solid #ddd', margin: '1rem 0', padding: '1rem', borderRadius: '8px' }}>
-                            <a href={res.url} target="_blank" rel="noreferrer"><strong>{res.page_title || res.url}</strong></a>
+                            <a href={res.url} target="_blank" rel="noreferrer"><strong>{res.page_title}</strong></a>
                             <p>Ключевое слово: {res.keyword}</p>
                             <p>{res.context}</p>
                         </div>
                     ))}
                 </div>
             )}
-            <VkSearch />
-            <VkAutoSearch />
-            <OkSearch />
         </div>
     );
 }
-
-export default App;
