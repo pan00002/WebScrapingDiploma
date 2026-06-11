@@ -1,11 +1,13 @@
 # backend/app/vk_search_groups.py (обновлённая версия)
 import vk_api
 import logging
+import os
+from dotenv import load_dotenv
 from typing import List, Dict
-
+load_dotenv()
 logger = logging.getLogger(__name__)
 
-VK_TOKEN = "vk1.a.MN-DOK33PdExzMQ9IAYcGD9H6pID2MYNtLQFJuzuHWgyGaMOgKCKAVdi1FbSh6eJuDxxJafoyh_Fghzyvxe5NUsi1P-VFm22dzTwCpiVMfZJCXzO-WgObHuF9bl6KVgZih5OfTXvVCa2e_YzLSm9Eg58A8Lq7JYFhd7zOy7zFikijsmuwXRzmunZOkB7K2gNKZUXCQ2lHgEN31B0IqsMCA"
+VK_TOKEN = VK_TOKEN = os.getenv("VK_TOKEN")
 
 def search_communities_by_keyword(keyword: str, count: int = 20) -> List[Dict]:
     vk_session = vk_api.VkApi(token=VK_TOKEN)

@@ -1,8 +1,9 @@
 # test_vk_api.py
 import vk_api
-
-VK_TOKEN = "vk1.a.MN-DOK33PdExzMQ9IAYcGD9H6pID2MYNtLQFJuzuHWgyGaMOgKCKAVdi1FbSh6eJuDxxJafoyh_Fghzyvxe5NUsi1P-VFm22dzTwCpiVMfZJCXzO-WgObHuF9bl6KVgZih5OfTXvVCa2e_YzLSm9Eg58A8Lq7JYFhd7zOy7zFikijsmuwXRzmunZOkB7K2gNKZUXCQ2lHgEN31B0IqsMCA"  # вставьте сюда
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
+VK_TOKEN = os.getenv("VK_TOKEN")
 vk_session = vk_api.VkApi(token=VK_TOKEN)
 vk = vk_session.get_api()
 

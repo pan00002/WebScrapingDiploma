@@ -8,6 +8,8 @@ from app.scraper import scrape_site
 from app.rutube_client import search_rutube_videos
 from app.vk_search_groups import search_communities_by_keyword
 from app.vk_post_parser import parse_vk_group_and_save
+from app.ok_client import scrape_ok_group
+from app.ok_search_groups import search_ok_groups_by_keyword
 
 logger = logging.getLogger(__name__)
 
@@ -172,23 +174,14 @@ async def run_rutube_search_task(task_id: str, keywords: list):
 
 # backend/app/tasks.py (добавить в конец)
 
-async def run_vk_search_by_keyword_task(task_id: str, keywords: list, max_groups: int = 10):
-    """
-    Ищет сообщества VK по первому ключевому слову,
-    затем парсит посты из найденных групп и сохраняет результаты.
-    Старая логика (по конкретным группам) остаётся в run_vk_search_task.
-    """
+async def run_vk_search_by_keyword_task(task_id: str, keywords: list, max_groups: int = 10, days: int = None):
     from app.database import AsyncSessionLocal
-    import vk_api
-    from app.vk_client import VK_TOKEN, get_group_id
-
     async with AsyncSessionLocal() as db:
         try:
             await crud.update_task_status(db, task_id, "running")
             vk_session = vk_api.VkApi(token=VK_TOKEN)
             vk = vk_session.get_api()
 
-            # Ищем группы по первому ключевому слову (можно расширить)
             keyword_for_search = keywords[0] if keywords else ""
             if not keyword_for_search:
                 await crud.update_task_status(db, task_id, "failed", "Нет ключевых слов для поиска групп")
@@ -208,13 +201,41 @@ async def run_vk_search_by_keyword_task(task_id: str, keywords: list, max_groups
                 owner_id = get_group_id(vk, screen_name)
                 if not owner_id:
                     continue
-                matches_count = await parse_vk_group_and_save(db, vk, owner_id, screen_name, keywords, task_id)
+                matches_count = await parse_vk_group_and_save(db, vk, owner_id, screen_name, keywords, task_id, days)
                 total_matches += matches_count
                 processed += 1
                 await crud.update_task_progress(db, task_id, processed, total_matches)
-                await asyncio.sleep(0.5)  # задержка между группами
+                await asyncio.sleep(0.5)
 
             await crud.update_task_status(db, task_id, "completed")
         except Exception as e:
-            logger.exception(f"Ошибка в run_vk_search_by_keyword_task: {e}")
+            logger.exception("VK auto task error")
+            await crud.update_task_status(db, task_id, "failed", str(e))
+
+async def run_ok_search_by_keyword_task(task_id: str, keywords: list, max_groups: int = 10, days: int = None):
+    from app.database import AsyncSessionLocal
+    async with AsyncSessionLocal() as db:
+        try:
+            await crud.update_task_status(db, task_id, "running")
+            kw = keywords[0] if keywords else ""
+            if not kw:
+                await crud.update_task_status(db, task_id, "failed", "Нет ключевого слова")
+                return
+            groups = await search_ok_groups_by_keyword(kw, limit=max_groups)
+            if not groups:
+                await crud.update_task_status(db, task_id, "failed", "Группы не найдены")
+                return
+            total = len(groups)
+            processed = 0
+            all_matches = []
+            for g in groups:
+                matches = await scrape_ok_group(g['url'], keywords, window=150)
+                if matches:
+                    all_matches.extend(matches)
+                    await crud.add_matches(db, task_id, matches)
+                processed += 1
+                await crud.update_task_progress(db, task_id, processed, len(all_matches))
+                await asyncio.sleep(2)
+            await crud.update_task_status(db, task_id, "completed")
+        except Exception as e:
             await crud.update_task_status(db, task_id, "failed", str(e))

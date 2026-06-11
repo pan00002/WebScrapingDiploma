@@ -24,6 +24,7 @@ class SearchTask(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
     error_message = Column(Text, nullable=True)
+    task_type = Column(String, nullable=True, default="web")   # для идентификации типа задачи
 
 class Match(Base):
     __tablename__ = "matches"
@@ -33,6 +34,7 @@ class Match(Base):
     keyword = Column(String)
     context = Column(Text)
     page_title = Column(String, nullable=True)
+    published_at = Column(String, nullable=True)   # дата публикации поста
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 async def init_db():

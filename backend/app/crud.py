@@ -4,7 +4,7 @@ from .database import SearchTask, Match
 import datetime
 from typing import List, Dict
 
-async def create_task(db: AsyncSession, keywords: List[str], sites: List[str], config: dict) -> SearchTask:
+async def create_task(db: AsyncSession, keywords: List[str], sites: List[str], config: dict, task_type: str = "web") -> SearchTask:
     task = SearchTask(
         keywords=keywords,
         sites=sites,
@@ -12,7 +12,8 @@ async def create_task(db: AsyncSession, keywords: List[str], sites: List[str], c
         status="pending",
         total_sites=len(sites),
         processed_sites=0,
-        found_matches=0
+        found_matches=0,
+        task_type=task_type
     )
     db.add(task)
     await db.commit()
@@ -44,7 +45,8 @@ async def add_matches(db: AsyncSession, task_id: str, matches: List[Dict]):
             url=m["url"],
             keyword=m["keyword"],
             context=m["context"],
-            page_title=m.get("page_title")
+            page_title=m.get("page_title"),
+            published_at=m.get("published_at")
         )
         db.add(match)
     await db.commit()

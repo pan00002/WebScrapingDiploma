@@ -43,11 +43,24 @@ export const rutubeSearch = async (keywords, config = {}) => {
     return response.data;
 };
 
-export const vkSearchByKeyword = async (keywords, maxGroups = 10, config = {}) => {
+export const vkSearchByKeyword = async (keywords, maxGroups = 10, days = null) => {
+    const config = {};
+    if (days) config.days = days;
     const response = await axios.post(`${API_BASE}/vk_search_by_keyword`, {
         keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
         sites: [],
-        config: { ...config, max_groups: maxGroups }
+        config: { max_groups: maxGroups, ...config }
+    });
+    return response.data;
+};
+
+export const okSearchByKeyword = async (keywords, maxGroups = 10, days = null) => {
+    const config = { max_groups: maxGroups };
+    
+    const response = await axios.post(`${API_BASE}/ok_search_by_keyword`, {
+        keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
+        sites: [],
+        config
     });
     return response.data;
 };

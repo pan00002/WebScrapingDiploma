@@ -60,6 +60,7 @@ async def get_task_status(task_id: str, db: AsyncSession = Depends(get_db)):
             "keyword": m.keyword,
             "context": m.context,
             "page_title": m.page_title,
+            "published_at": m.published_at  # новое поле
         }
         for m in matches
     ]
@@ -96,9 +97,29 @@ async def rutube_search(request: schemas.SearchRequest, background_tasks: Backgr
 
 @app.post("/api/vk_search_by_keyword", response_model=schemas.TaskResponse)
 async def vk_search_by_keyword(request: schemas.SearchRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
-    # Здесь request.sites игнорируется, так как группы ищутся автоматически
-    # Но можно передать max_groups через config
     max_groups = request.config.get("max_groups", 10) if request.config else 10
-    task = await crud.create_task(db, request.keywords, [], request.config or {})
-    background_tasks.add_task(run_vk_search_by_keyword_task, task.id, request.keywords, max_groups)
+    days = request.config.get("days") if request.config else None
+    task = await crud.create_task(db, request.keywords, [], request.config or {}, task_type="vk_auto")
+    background_tasks.add_task(tasks.run_vk_search_by_keyword_task, task.id, request.keywords, max_groups, days)
     return schemas.TaskResponse(task_id=task.id, status=task.status, created_at=task.created_at)
+
+@app.post("/api/ok_search_by_keyword", response_model=schemas.TaskResponse)
+async def ok_search_by_keyword(request: schemas.SearchRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    max_groups = request.config.get("max_groups", 10) if request.config else 10
+    days = request.config.get("days") if request.config else None
+    task = await crud.create_task(db, request.keywords, [], request.config or {})
+    background_tasks.add_task(tasks.run_ok_search_by_keyword_task, task.id, request.keywords, max_groups)
+    return schemas.TaskResponse(task_id=task.id, status=task.status, created_at=task.created_at)
+
+
+@app.get("/api/stats/vk_task/{task_id}")
+async def vk_task_stats(task_id: str, db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import func, select
+    from app.database import Match
+    stmt = select(Match.keyword, func.count(Match.id)).where(Match.search_id == task_id).group_by(Match.keyword)
+    result = await db.execute(stmt)
+    stats = [{"keyword": row[0], "count": row[1]} for row in result.all()]
+    total = sum(item["count"] for item in stats)
+    for item in stats:
+        item["percent"] = round(item["count"] / total * 100, 1) if total else 0
+    return {"total": total, "stats": stats, "task_id": task_id}

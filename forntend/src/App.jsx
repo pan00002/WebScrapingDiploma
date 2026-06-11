@@ -5,6 +5,8 @@ import OkSearch from './OkSearch';
 import RutubeSearch from './RutubeSearch';
 import VkAutoSearch from './VkAutoSearch';
 import VkGroupFinder from './VkGroupFinder';
+import OkAutoSearch from './OkAutoSearch';
+import VkAutoStatsChart from './VkAutoStatsChart';
 function App() {
     const [keywords, setKeywords] = useState('');
     const [sites, setSites] = useState('');
@@ -88,9 +90,10 @@ function App() {
                     ))}
                 </div>
             )}
-            <VkSearch />
             <VkAutoSearch />
+          
             <OkSearch />
+            <OkAutoSearch />
         </div>
     );
 }
