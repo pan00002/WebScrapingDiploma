@@ -64,3 +64,52 @@ export const okSearchByKeyword = async (keywords, maxGroups = 10, days = null) =
     });
     return response.data;
 };
+
+export const getSentimentStats = async (taskId) => {
+    const response = await axios.get(`${API_BASE}/sentiment_stats/${taskId}`);
+    return response.data;
+};
+
+export const youtubeSearch = async (keywords, config = {}) => {
+    const response = await axios.post(`${API_BASE}/youtube_search`, {
+        keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
+        sites: [],
+        config
+    });
+    return response.data;
+};
+export const okAutoSearch = async (keywords, maxGroups = 10, days = null) => {
+    const config = {};
+    if (maxGroups) config.max_groups = maxGroups;
+    if (days) config.days = days;
+    const response = await axios.post(`${API_BASE}/ok_auto_search`, {
+        keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
+        sites: [],
+        config
+    });
+    return response.data;
+};
+
+// frontend/src/api.js
+export const okPresetSearch = async (keywords, days = null) => {
+    const config = {};
+    if (days) config.days = days;
+    const response = await axios.post(`${API_BASE}/ok_preset_search`, {
+        keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
+        sites: [],
+        config
+    });
+    return response.data;
+};
+
+// frontend/src/api.js
+export const rssSearch = async (keywords, days = null) => {
+    const config = {};
+    if (days) config.days = days;
+    const response = await axios.post(`${API_BASE}/rss_search`, {
+        keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
+        sites: [],
+        config
+    });
+    return response.data;
+};

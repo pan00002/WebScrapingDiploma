@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import logging
 import re
 from typing import List, Dict
+from googlesearch import search
 
 logger = logging.getLogger(__name__)
 
@@ -49,3 +50,4 @@ async def search_ok_groups_by_keyword(keyword: str, limit: int = 10) -> List[Dic
         if len(groups) >= limit:
             break
     return groups
+

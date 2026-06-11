@@ -1,6 +1,8 @@
+// frontend/src/VkAutoSearch.js
 import React, { useState } from 'react';
 import { vkSearchByKeyword, getTaskStatus } from './api';
 import VkAutoStatsChart from './VkAutoStatsChart';
+import SentimentStats from './SentimentStats';
 
 export default function VkAutoSearch() {
     const [keywords, setKeywords] = useState('');
@@ -67,16 +69,36 @@ export default function VkAutoSearch() {
             <form onSubmit={handleSubmit}>
                 <div>
                     <label>Ключевые слова для поиска в постах (через запятую)</label>
-                    <textarea rows="2" value={keywords} onChange={e => setKeywords(e.target.value)} style={{ width: '100%' }} placeholder="например: Москва, Саранск" />
+                    <textarea
+                        rows="2"
+                        value={keywords}
+                        onChange={e => setKeywords(e.target.value)}
+                        style={{ width: '100%' }}
+                        placeholder="например: Москва, Саранск"
+                    />
                 </div>
                 <div style={{ marginTop: '10px', display: 'flex', gap: '20px', alignItems: 'center' }}>
                     <div>
                         <label>Максимальное количество групп: </label>
-                        <input type="number" value={maxGroups} onChange={e => setMaxGroups(Number(e.target.value))} min="1" max="50" style={{ width: '80px' }} />
+                        <input
+                            type="number"
+                            value={maxGroups}
+                            onChange={e => setMaxGroups(Number(e.target.value))}
+                            min="1"
+                            max="50"
+                            style={{ width: '80px' }}
+                        />
                     </div>
                     <div>
                         <label>За последние N дней: </label>
-                        <input type="number" value={days} onChange={e => setDays(Number(e.target.value))} min="1" max="365" style={{ width: '80px' }} />
+                        <input
+                            type="number"
+                            value={days}
+                            onChange={e => setDays(Number(e.target.value))}
+                            min="1"
+                            max="365"
+                            style={{ width: '80px' }}
+                        />
                     </div>
                 </div>
                 <button type="submit" disabled={loading} style={{ marginTop: '1rem' }}>
@@ -92,17 +114,34 @@ export default function VkAutoSearch() {
             )}
 
             <VkAutoStatsChart taskId={currentTaskId} status={taskStatus} />
+            {taskStatus === 'completed' && <SentimentStats taskId={currentTaskId} />}
 
             {results.length > 0 && (
                 <div style={{ marginTop: '2rem' }}>
                     <h3>Результаты ({results.length})</h3>
                     {results.map((res, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '15px', borderBottom: '1px solid #ddd', marginBottom: '15px', paddingBottom: '15px' }}>
+                        <div
+                            key={idx}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '15px',
+                                borderBottom: '1px solid #ddd',
+                                marginBottom: '15px',
+                                paddingBottom: '15px'
+                            }}
+                        >
                             <a href={res.url} target="_blank" rel="noopener noreferrer">
-                                <img src={VK_LOGO} alt="logo" style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }} />
+                                <img
+                                    src={VK_LOGO}
+                                    alt="logo"
+                                    style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }}
+                                />
                             </a>
                             <div style={{ flex: 1 }}>
-                                <a href={res.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 'bold' }}>{res.page_title || res.url}</a>
+                                <a href={res.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 'bold' }}>
+                                    {res.page_title || res.url}
+                                </a>
                                 <p><strong>Ключевое слово:</strong> {res.keyword}</p>
                                 <p>{res.context}</p>
                                 <p><strong>Дата публикации:</strong> {res.published_at || 'не указана'}</p>

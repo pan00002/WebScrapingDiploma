@@ -10,7 +10,12 @@ from app.vk_search_groups import search_communities_by_keyword
 from app.vk_post_parser import parse_vk_group_and_save
 from app.ok_client import scrape_ok_group
 from app.ok_search_groups import search_ok_groups_by_keyword
-
+from app.youtube_client import search_youtube_videos
+from app.ok_google_search import search_ok_groups_via_google
+from app.ok_client import scrape_ok_group
+from app.ok_preset_urls import PRESET_URLS
+from app.ok_client import scrape_ok_group
+from app.rss_client import search_rss
 logger = logging.getLogger(__name__)
 
 # ========== 1. ОБЫЧНЫЙ ПОИСК ПО САЙТАМ (HTTPX / PLAYWRIGHT) ==========
@@ -236,6 +241,115 @@ async def run_ok_search_by_keyword_task(task_id: str, keywords: list, max_groups
                 processed += 1
                 await crud.update_task_progress(db, task_id, processed, len(all_matches))
                 await asyncio.sleep(2)
+            await crud.update_task_status(db, task_id, "completed")
+        except Exception as e:
+            await crud.update_task_status(db, task_id, "failed", str(e))
+
+async def run_youtube_search_task(task_id: str, keywords: list):
+    """Фоновая задача для поиска видео на YouTube."""
+    from app.database import AsyncSessionLocal
+    from app import crud
+
+    async with AsyncSessionLocal() as db:
+        try:
+            await crud.update_task_status(db, task_id, "running")
+            all_matches = []
+            for kw in keywords:
+                videos = search_youtube_videos(kw, max_results=20)
+                for video in videos:
+                    # Преобразуем дату из YYYYMMDD в читаемый формат (необязательно)
+                    upload_date = video['upload_date']
+                    if upload_date and len(upload_date) == 8:
+                        formatted_date = f"{upload_date[:4]}-{upload_date[4:6]}-{upload_date[6:8]}"
+                    else:
+                        formatted_date = upload_date
+                    all_matches.append({
+                        "url": video['url'],
+                        "keyword": kw,
+                        "context": video['description'],
+                        "page_title": video['title'],
+                        "group_photo": "https://img.icons8.com/color/48/youtube-play.png",  # иконка YouTube
+                        "published_at": formatted_date,
+                        "sentiment": "neutral"  # YouTube видео пока без анализа тональности
+                    })
+            if all_matches:
+                await crud.add_matches(db, task_id, all_matches)
+            await crud.update_task_status(db, task_id, "completed")
+        except Exception as e:
+            await crud.update_task_status(db, task_id, "failed", str(e))
+
+async def run_ok_auto_search_task(task_id: str, keywords: list, max_groups: int = 10, days: int = None):
+    from app.database import AsyncSessionLocal
+    from app import crud
+
+    async with AsyncSessionLocal() as db:
+        try:
+            await crud.update_task_status(db, task_id, "running")
+            keyword_for_search = keywords[0] if keywords else ""
+            if not keyword_for_search:
+                await crud.update_task_status(db, task_id, "failed", "Нет ключевых слов для поиска групп")
+                return
+
+            # Поиск URL групп через Google
+            group_urls = await search_ok_groups_via_google(keyword_for_search, max_groups)
+            if not group_urls:
+                await crud.update_task_status(db, task_id, "failed", "Группы не найдены через Google")
+                return
+
+            total = len(group_urls)
+            processed = 0
+            all_matches = []
+
+            for url in group_urls:
+                matches = await scrape_ok_group(url, keywords, days, window=150)
+                if matches:
+                    all_matches.extend(matches)
+                    await crud.add_matches(db, task_id, matches)
+                processed += 1
+                await crud.update_task_progress(db, task_id, processed, len(all_matches))
+                import asyncio
+                await asyncio.sleep(2)  # пауза между группами
+
+            await crud.update_task_status(db, task_id, "completed")
+        except Exception as e:
+            await crud.update_task_status(db, task_id, "failed", str(e))
+
+async def run_ok_preset_search_task(task_id: str, keywords: list, days: int = None):
+    """Фоновая задача для поиска по предопределённому списку групп OK."""
+    from app.database import AsyncSessionLocal
+    from app import crud
+    import asyncio
+
+    async with AsyncSessionLocal() as db:
+        try:
+            await crud.update_task_status(db, task_id, "running")
+            total = len(PRESET_URLS)
+            processed = 0
+            all_matches = []
+
+            for url in PRESET_URLS:
+                matches = await scrape_ok_group(url, keywords, days, window=150)
+                if matches:
+                    all_matches.extend(matches)
+                    await crud.add_matches(db, task_id, matches)
+                processed += 1
+                await crud.update_task_progress(db, task_id, processed, len(all_matches))
+                await asyncio.sleep(1)  # задержка между группами
+
+            await crud.update_task_status(db, task_id, "completed")
+        except Exception as e:
+            await crud.update_task_status(db, task_id, "failed", str(e))
+
+async def run_rss_search_task(task_id: str, keywords: list, days: int = None):
+    from app.database import AsyncSessionLocal
+    from app import crud
+
+    async with AsyncSessionLocal() as db:
+        try:
+            await crud.update_task_status(db, task_id, "running")
+            matches = await search_rss(keywords, days, max_articles_per_feed=30)
+            if matches:
+                await crud.add_matches(db, task_id, matches)
             await crud.update_task_status(db, task_id, "completed")
         except Exception as e:
             await crud.update_task_status(db, task_id, "failed", str(e))

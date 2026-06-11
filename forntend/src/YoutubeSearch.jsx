@@ -1,11 +1,9 @@
-// frontend/src/OkAutoSearch.js
+// frontend/src/YoutubeSearch.js
 import React, { useState } from 'react';
-import { okAutoSearch, getTaskStatus } from './api';
+import { youtubeSearch, getTaskStatus } from './api';
 
-export default function OkAutoSearch() {
+export default function YoutubeSearch() {
     const [keywords, setKeywords] = useState('');
-    const [maxGroups, setMaxGroups] = useState(10);
-    const [days, setDays] = useState(7);
     const [loading, setLoading] = useState(false);
     const [taskId, setTaskId] = useState(null);
     const [results, setResults] = useState([]);
@@ -42,46 +40,35 @@ export default function OkAutoSearch() {
         setLoading(true);
         setResults([]);
         try {
-            const task = await okAutoSearch(keywords, maxGroups, days);
+            const task = await youtubeSearch(keywords);
             setTaskId(task.task_id);
             startPolling(task.task_id);
         } catch (err) {
             console.error(err);
-            alert('Ошибка запуска поиска OK');
+            alert('Ошибка запуска поиска YouTube');
             setLoading(false);
         }
     };
 
-    const OK_LOGO = "https://ok.ru/static/img/logo.png";
+    const YOUTUBE_LOGO = "https://img.icons8.com/color/48/youtube-play.png";
 
     return (
         <div style={{ marginTop: '2rem', borderTop: '1px solid #ccc', paddingTop: '2rem' }}>
-            <h2>Автоматический поиск по группам Одноклассников</h2>
-            <p>Группы будут найдены через Google по первому ключевому слову.</p>
+            <h2>Поиск видео на YouTube</h2>
             <form onSubmit={handleSubmit}>
                 <div>
                     <label>Ключевые слова (через запятую)</label>
-                    <textarea rows="2" value={keywords} onChange={e => setKeywords(e.target.value)} style={{ width: '100%' }} />
-                </div>
-                <div style={{ marginTop: '10px', display: 'flex', gap: '20px', alignItems: 'center' }}>
-                    <div>
-                        <label>Максимальное количество групп: </label>
-                        <input type="number" value={maxGroups} onChange={e => setMaxGroups(Number(e.target.value))} min="1" max="30" style={{ width: '80px' }} />
-                    </div>
-                    <div>
-                        <label>За последние N дней: </label>
-                        <input type="number" value={days} onChange={e => setDays(Number(e.target.value))} min="1" max="365" style={{ width: '80px' }} />
-                    </div>
+                    <textarea rows="2" value={keywords} onChange={e => setKeywords(e.target.value)} style={{ width: '100%' }} placeholder="например: новости сегодня" />
                 </div>
                 <button type="submit" disabled={loading} style={{ marginTop: '1rem' }}>
-                    {loading ? 'Поиск...' : 'Найти группы и посты'}
+                    {loading ? 'Поиск...' : 'Искать на YouTube'}
                 </button>
             </form>
 
             {taskId && (
                 <div style={{ marginTop: '1rem' }}>
                     <p>ID задачи: <code>{taskId}</code></p>
-                    <p>Прогресс: {progress.processed} / {progress.total} групп, найдено совпадений: {progress.found}</p>
+                    <p>Прогресс: найдено {progress.found} видео</p>
                 </div>
             )}
 
@@ -90,7 +77,7 @@ export default function OkAutoSearch() {
                     <h3>Результаты ({results.length})</h3>
                     {results.map((res, idx) => (
                         <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '15px', borderBottom: '1px solid #ddd', marginBottom: '15px', paddingBottom: '15px' }}>
-                            <img src={OK_LOGO} alt="OK" style={{ width: '40px', height: '40px' }} />
+                            <img src={YOUTUBE_LOGO} alt="YouTube" style={{ width: '40px', height: '40px' }} />
                             <div>
                                 <a href={res.url} target="_blank" rel="noopener noreferrer"><strong>{res.page_title}</strong></a>
                                 <p><strong>Ключевое слово:</strong> {res.keyword}</p>

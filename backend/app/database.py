@@ -36,6 +36,7 @@ class Match(Base):
     page_title = Column(String, nullable=True)
     published_at = Column(String, nullable=True)   # дата публикации поста
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    sentiment = Column(String, nullable=True)
 
 async def init_db():
     async with engine.begin() as conn:

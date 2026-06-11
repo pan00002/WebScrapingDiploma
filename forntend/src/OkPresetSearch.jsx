@@ -1,10 +1,9 @@
-// frontend/src/OkAutoSearch.js
+// frontend/src/OkPresetSearch.js
 import React, { useState } from 'react';
-import { okAutoSearch, getTaskStatus } from './api';
+import { okPresetSearch, getTaskStatus } from './api';
 
-export default function OkAutoSearch() {
+export default function OkPresetSearch() {
     const [keywords, setKeywords] = useState('');
-    const [maxGroups, setMaxGroups] = useState(10);
     const [days, setDays] = useState(7);
     const [loading, setLoading] = useState(false);
     const [taskId, setTaskId] = useState(null);
@@ -42,12 +41,12 @@ export default function OkAutoSearch() {
         setLoading(true);
         setResults([]);
         try {
-            const task = await okAutoSearch(keywords, maxGroups, days);
+            const task = await okPresetSearch(keywords, days);
             setTaskId(task.task_id);
             startPolling(task.task_id);
         } catch (err) {
             console.error(err);
-            alert('Ошибка запуска поиска OK');
+            alert('Ошибка запуска поиска');
             setLoading(false);
         }
     };
@@ -56,32 +55,26 @@ export default function OkAutoSearch() {
 
     return (
         <div style={{ marginTop: '2rem', borderTop: '1px solid #ccc', paddingTop: '2rem' }}>
-            <h2>Автоматический поиск по группам Одноклассников</h2>
-            <p>Группы будут найдены через Google по первому ключевому слову.</p>
+            <h2>Поиск по предустановленным группам Одноклассников</h2>
+            <p>Поиск выполняется в фиксированном списке из 50+ групп (Саранск, Мордовия, птицы, котики, новости).</p>
             <form onSubmit={handleSubmit}>
                 <div>
                     <label>Ключевые слова (через запятую)</label>
-                    <textarea rows="2" value={keywords} onChange={e => setKeywords(e.target.value)} style={{ width: '100%' }} />
+                    <textarea rows="2" value={keywords} onChange={e => setKeywords(e.target.value)} style={{ width: '100%' }} placeholder="например: Саранск, котики" />
                 </div>
-                <div style={{ marginTop: '10px', display: 'flex', gap: '20px', alignItems: 'center' }}>
-                    <div>
-                        <label>Максимальное количество групп: </label>
-                        <input type="number" value={maxGroups} onChange={e => setMaxGroups(Number(e.target.value))} min="1" max="30" style={{ width: '80px' }} />
-                    </div>
-                    <div>
-                        <label>За последние N дней: </label>
-                        <input type="number" value={days} onChange={e => setDays(Number(e.target.value))} min="1" max="365" style={{ width: '80px' }} />
-                    </div>
+                <div style={{ marginTop: '10px' }}>
+                    <label>За последние N дней: </label>
+                    <input type="number" value={days} onChange={e => setDays(Number(e.target.value))} min="1" max="365" style={{ width: '80px' }} />
                 </div>
                 <button type="submit" disabled={loading} style={{ marginTop: '1rem' }}>
-                    {loading ? 'Поиск...' : 'Найти группы и посты'}
+                    {loading ? 'Поиск...' : 'Искать в предустановленных группах'}
                 </button>
             </form>
 
             {taskId && (
                 <div style={{ marginTop: '1rem' }}>
                     <p>ID задачи: <code>{taskId}</code></p>
-                    <p>Прогресс: {progress.processed} / {progress.total} групп, найдено совпадений: {progress.found}</p>
+                    <p>Прогресс: обработано {progress.processed} из {progress.total} групп, найдено совпадений: {progress.found}</p>
                 </div>
             )}
 

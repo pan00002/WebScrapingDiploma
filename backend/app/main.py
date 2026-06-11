@@ -5,6 +5,10 @@ from .database import AsyncSessionLocal, init_db
 from . import schemas, crud, tasks
 from app.tasks import run_ok_search_task
 from app.tasks import run_vk_search_by_keyword_task
+from app.tasks import run_ok_auto_search_task
+from app.tasks import run_youtube_search_task
+from app.tasks import run_ok_preset_search_task
+from app.tasks import run_rss_search_task
 
 app = FastAPI(title="Web Scraper API")
 
@@ -123,3 +127,44 @@ async def vk_task_stats(task_id: str, db: AsyncSession = Depends(get_db)):
     for item in stats:
         item["percent"] = round(item["count"] / total * 100, 1) if total else 0
     return {"total": total, "stats": stats, "task_id": task_id}
+
+@app.get("/api/sentiment_stats/{task_id}")
+async def sentiment_stats(task_id: str, db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import func, select
+    from app.database import Match
+    stmt = select(Match.sentiment, func.count(Match.id)).where(Match.search_id == task_id).group_by(Match.sentiment)
+    result = await db.execute(stmt)
+    stats = {row[0] or 'neutral': row[1] for row in result.all()}
+    for t in ('positive', 'negative', 'neutral'):
+        if t not in stats:
+            stats[t] = 0
+    total = sum(stats.values())
+    return {"total": total, "stats": stats}
+
+@app.post("/api/youtube_search", response_model=schemas.TaskResponse)
+async def youtube_search(request: schemas.SearchRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    task = await crud.create_task(db, request.keywords, [], request.config or {})
+    background_tasks.add_task(run_youtube_search_task, task.id, request.keywords)
+    return schemas.TaskResponse(task_id=task.id, status=task.status, created_at=task.created_at)
+
+@app.post("/api/ok_auto_search", response_model=schemas.TaskResponse)
+async def ok_auto_search(request: schemas.SearchRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    max_groups = request.config.get("max_groups", 10) if request.config else 10
+    days = request.config.get("days", None) if request.config else None
+    task = await crud.create_task(db, request.keywords, [], request.config or {})
+    background_tasks.add_task(run_ok_auto_search_task, task.id, request.keywords, max_groups, days)
+    return schemas.TaskResponse(task_id=task.id, status=task.status, created_at=task.created_at)
+
+@app.post("/api/ok_preset_search", response_model=schemas.TaskResponse)
+async def ok_preset_search(request: schemas.SearchRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    days = request.config.get("days", None) if request.config else None
+    task = await crud.create_task(db, request.keywords, [], request.config or {})
+    background_tasks.add_task(run_ok_preset_search_task, task.id, request.keywords, days)
+    return schemas.TaskResponse(task_id=task.id, status=task.status, created_at=task.created_at)
+
+@app.post("/api/rss_search", response_model=schemas.TaskResponse)
+async def rss_search(request: schemas.SearchRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    days = request.config.get("days", None) if request.config else None
+    task = await crud.create_task(db, request.keywords, [], request.config or {})
+    background_tasks.add_task(run_rss_search_task, task.id, request.keywords, days)
+    return schemas.TaskResponse(task_id=task.id, status=task.status, created_at=task.created_at)
