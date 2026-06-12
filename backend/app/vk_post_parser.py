@@ -52,7 +52,8 @@ async def parse_vk_group_and_save(db, vk, owner_id: int, group_identifier: str, 
                         "context": ctx,
                         "page_title": group_name,
                         "published_at": published_at,
-                        "sentiment": sentiment
+                        "sentiment": sentiment,
+                        "source": "vk"
                     })
                 # Примечание: если одно ключевое слово найдено, продолжаем проверять остальные kw
                 # для этого же поста — это правильно.

@@ -75,7 +75,8 @@ async def scrape_ok_group(url: str, keywords: List[str], days: int = None, windo
                         "context": ctx,
                         "page_title": page_title,
                         "group_photo": None,
-                        "published_at": post_date.strftime('%Y-%m-%d %H:%M:%S') if post_date else None
+                        "published_at": post_date.strftime('%Y-%m-%d %H:%M:%S') if post_date else None,
+                        "source": "ok"
                     })
     return results
 

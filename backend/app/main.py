@@ -64,7 +64,8 @@ async def get_task_status(task_id: str, db: AsyncSession = Depends(get_db)):
             "keyword": m.keyword,
             "context": m.context,
             "page_title": m.page_title,
-            "published_at": m.published_at  # новое поле
+            "published_at": m.published_at,  # новое поле
+            "source": m.source
         }
         for m in matches
     ]
@@ -167,4 +168,11 @@ async def rss_search(request: schemas.SearchRequest, background_tasks: Backgroun
     days = request.config.get("days", None) if request.config else None
     task = await crud.create_task(db, request.keywords, [], request.config or {})
     background_tasks.add_task(run_rss_search_task, task.id, request.keywords, days)
+    return schemas.TaskResponse(task_id=task.id, status=task.status, created_at=task.created_at)
+
+@app.post("/api/unified_search", response_model=schemas.TaskResponse)
+async def unified_search(request: schemas.SearchRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    days = request.config.get("days", 7) if request.config else 7
+    task = await crud.create_task(db, request.keywords, [], request.config or {})
+    background_tasks.add_task(tasks.run_unified_search_task, task.id, request.keywords, days)
     return schemas.TaskResponse(task_id=task.id, status=task.status, created_at=task.created_at)

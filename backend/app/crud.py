@@ -40,7 +40,6 @@ async def update_task_progress(db: AsyncSession, task_id: str, processed_sites: 
 
 async def add_matches(db: AsyncSession, task_id: str, matches: List[Dict]):
     for m in matches:
-        print(f"DEBUG add_matches: sentiment = {m.get('sentiment')}")  # <-- добавить
         match = Match(
             search_id=task_id,
             url=m["url"],
@@ -48,7 +47,8 @@ async def add_matches(db: AsyncSession, task_id: str, matches: List[Dict]):
             context=m["context"],
             page_title=m.get("page_title"),
             published_at=m.get("published_at"),
-            sentiment=m.get("sentiment")   # ← исправлено: строка внутри создания объекта
+            sentiment=m.get("sentiment"),
+            source=m.get("source")   # <--- ДОБАВИТЬ ЭТУ СТРОКУ
         )
         db.add(match)
     await db.commit()

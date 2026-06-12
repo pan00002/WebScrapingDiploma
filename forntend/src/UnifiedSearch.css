@@ -1,0 +1,58 @@
+/* UnifiedSearch.css */
+.unified-search {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.search-form textarea {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+}
+
+.search-form button {
+    margin-top: 15px;
+}
+
+.stats-container {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+    margin-bottom: 30px;
+}
+
+.chart-box {
+    width: 300px;
+    text-align: center;
+}
+
+.results-container {
+    max-height: 500px;
+    overflow-y: auto;
+    margin-top: 20px;
+}
+
+.result-card {
+    border-bottom: 1px solid #ddd;
+    padding: 15px 0;
+}
+
+.result-source {
+    font-size: 0.8em;
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 12px;
+}
+
+.result-meta {
+    font-size: 0.85em;
+    color: #666;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin: 20px 0;
+}

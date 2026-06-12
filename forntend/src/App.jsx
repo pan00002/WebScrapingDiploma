@@ -10,7 +10,7 @@ import VkAutoStatsChart from './VkAutoStatsChart';
 import YoutubeSearch from './YoutubeSearch';
 import OkPresetSearch from './OkPresetSearch';
 import RssSearch from './RssSearch';
-
+import UnifiedSearch from './UnifiedSearch';
 
 function App() {
     const [keywords, setKeywords] = useState('');
@@ -70,7 +70,7 @@ function App() {
                     <textarea rows="2" value={keywords} onChange={e => setKeywords(e.target.value)} style={{ width: '100%' }} />
                 </div>
                 <div>
-                    <label>Сайты (по одному на строку, с http:// или https://)</label>
+                    <label>Добавьте свои сайты для поиска</label>
                     <textarea rows="5" value={sites} onChange={e => setSites(e.target.value)} placeholder="https://example.com" style={{ width: '100%' }} />
                 </div>
                 <button type="submit" disabled={loading}>
@@ -101,6 +101,8 @@ function App() {
         {/* <OkAutoSearch /> */}
             <OkPresetSearch />
             <RssSearch />
+
+            <UnifiedSearch/>
         </div>
     );
 }

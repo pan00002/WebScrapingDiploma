@@ -2,20 +2,26 @@
 import asyncio
 import logging
 import vk_api
-from app import crud
 from app.vk_client import VK_TOKEN, get_group_id, get_all_posts
 from app.scraper import scrape_site
 from app.rutube_client import search_rutube_videos
-from app.vk_search_groups import search_communities_by_keyword
 from app.vk_post_parser import parse_vk_group_and_save
-from app.ok_client import scrape_ok_group
 from app.ok_search_groups import search_ok_groups_by_keyword
 from app.youtube_client import search_youtube_videos
 from app.ok_google_search import search_ok_groups_via_google
-from app.ok_client import scrape_ok_group
+from app.database import AsyncSessionLocal
+from app import crud
+import asyncio
+import time
+from datetime import datetime
+from app.vk_search_groups import search_communities_by_keyword
+from app.vk_client import get_group_id, get_all_posts
+from app.scraper import find_context_in_text
+from app.sentiment_analyzer import analyze_sentiment
 from app.ok_preset_urls import PRESET_URLS
 from app.ok_client import scrape_ok_group
 from app.rss_client import search_rss
+
 logger = logging.getLogger(__name__)
 
 # ========== 1. ОБЫЧНЫЙ ПОИСК ПО САЙТАМ (HTTPX / PLAYWRIGHT) ==========
@@ -350,6 +356,139 @@ async def run_rss_search_task(task_id: str, keywords: list, days: int = None):
             matches = await search_rss(keywords, days, max_articles_per_feed=30)
             if matches:
                 await crud.add_matches(db, task_id, matches)
+            await crud.update_task_status(db, task_id, "completed")
+        except Exception as e:
+            await crud.update_task_status(db, task_id, "failed", str(e))
+
+async def run_unified_search_task(task_id: str, keywords: list, days: int = None):
+
+    async with AsyncSessionLocal() as db:
+        try:
+            await crud.update_task_status(db, task_id, "running")
+            all_matches = []
+
+            # 1. VK (автоматический поиск групп)
+            async def vk_task():
+                # Вызываем существующую логику VkAutoSearch
+                # Для простоты можно запустить run_vk_search_by_keyword_task, но она создаёт отдельную задачу.
+                # Поэтому лучше вынести основной цикл в отдельную функцию, а здесь вызвать.
+                # Для краткости приведу псевдокод:
+                matches = await search_vk_by_keywords(keywords, days)
+                return [dict(m, source="vk") for m in matches]
+
+            # 2. Одноклассники (предустановленный список URL)
+            async def ok_task():
+                all_ok = []
+                for url in PRESET_URLS:
+                    matches = await scrape_ok_group(url, keywords, days, window=150)
+                    for m in matches:
+                        m["source"] = "ok"
+                    all_ok.extend(matches)
+                return all_ok
+
+            # 3. RSS
+            async def rss_task():
+                matches = await search_rss(keywords, days)
+                for m in matches:
+                    m["source"] = m.get("source", "rss")
+                return matches
+
+            # Запускаем параллельно
+            results = await asyncio.gather(vk_task(), ok_task(), rss_task())
+            for res in results:
+                all_matches.extend(res)
+
+            if all_matches:
+                await crud.add_matches(db, task_id, all_matches)
+
+            await crud.update_task_status(db, task_id, "completed")
+        except Exception as e:
+            await crud.update_task_status(db, task_id, "failed", str(e))
+
+async def _collect_vk_matches(keywords: list, days: int = None) -> list:
+    """Собирает посты VK (автоматический поиск групп) без сохранения в БД."""
+    import vk_api
+    from app.vk_client import VK_TOKEN
+    matches = []
+    keyword_for_search = keywords[0] if keywords else ""
+    if not keyword_for_search:
+        return matches
+    vk_session = vk_api.VkApi(token=VK_TOKEN)
+    vk = vk_session.get_api()
+    found_groups = search_communities_by_keyword(keyword_for_search, count=10)
+    for group in found_groups:
+        screen_name = group['screen_name']
+        owner_id = get_group_id(vk, screen_name)
+        if not owner_id:
+            continue
+        # Получаем название группы
+        group_name = screen_name
+        try:
+            group_info = vk.groups.getById(group_id=abs(owner_id), fields='name')
+            if group_info and len(group_info) > 0:
+                group_name = group_info[0].get('name', screen_name)
+        except:
+            pass
+        posts = get_all_posts(vk, owner_id, limit=100)
+        current_time = time.time()
+        min_date = current_time - (days * 86400) if days else 0
+        for post in posts:
+            post_date = post.get('date', 0)
+            if min_date and post_date < min_date:
+                continue
+            text = post.get('text', '')
+            if not text:
+                continue
+            for kw in keywords:
+                if kw.lower() in text.lower():
+                    contexts = find_context_in_text(text, kw, window=200)
+                    if contexts:
+                        sentiment = analyze_sentiment(text)
+                        published_at = datetime.fromtimestamp(post_date).strftime('%Y-%m-%d %H:%M:%S')
+                        for ctx in contexts:
+                            matches.append({
+                                "url": f"https://vk.com/wall{owner_id}_{post['id']}",
+                                "keyword": kw,
+                                "context": ctx,
+                                "page_title": group_name,
+                                "published_at": published_at,
+                                "sentiment": sentiment,
+                                "source": "vk"
+                            })
+    return matches
+
+async def run_unified_search_task(task_id: str, keywords: list, days: int = None):
+    from app.database import AsyncSessionLocal
+    from app import crud
+    import asyncio
+
+    async with AsyncSessionLocal() as db:
+        try:
+            await crud.update_task_status(db, task_id, "running")
+            all_matches = []
+
+            # VK
+            vk_matches = await _collect_vk_matches(keywords, days)
+            all_matches.extend(vk_matches)
+
+            # Одноклассники (предустановленный список)
+            ok_matches = []
+            for url in PRESET_URLS:
+                matches = await scrape_ok_group(url, keywords, days, window=150)
+                for m in matches:
+                    m["source"] = "ok"
+                ok_matches.extend(matches)
+            all_matches.extend(ok_matches)
+
+            # RSS
+            rss_matches = await search_rss(keywords, days)
+            for m in rss_matches:
+                m["source"] = m.get("source", "rss")
+            all_matches.extend(rss_matches)
+
+            if all_matches:
+                await crud.add_matches(db, task_id, all_matches)
+
             await crud.update_task_status(db, task_id, "completed")
         except Exception as e:
             await crud.update_task_status(db, task_id, "failed", str(e))

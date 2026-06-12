@@ -34,9 +34,10 @@ class Match(Base):
     keyword = Column(String)
     context = Column(Text)
     page_title = Column(String, nullable=True)
-    published_at = Column(String, nullable=True)   # дата публикации поста
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    published_at = Column(String, nullable=True)
     sentiment = Column(String, nullable=True)
+    source = Column(String, nullable=True)   # <--- ДОБАВИТЬ ЭТУ СТРОКУ
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 async def init_db():
     async with engine.begin() as conn:

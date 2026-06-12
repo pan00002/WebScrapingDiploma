@@ -113,3 +113,12 @@ export const rssSearch = async (keywords, days = null) => {
     });
     return response.data;
 };
+
+export const unifiedSearch = async (keywords, days = 7) => {
+    const response = await axios.post(`${API_BASE}/unified_search`, {
+        keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
+        sites: [],
+        config: { days }
+    });
+    return response.data;
+};
