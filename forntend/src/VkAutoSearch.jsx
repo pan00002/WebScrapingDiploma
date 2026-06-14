@@ -1,4 +1,3 @@
-// frontend/src/VkAutoSearch.js
 import React, { useState } from 'react';
 import { vkSearchByKeyword, getTaskStatus } from './api';
 import VkAutoStatsChart from './VkAutoStatsChart';
@@ -40,10 +39,7 @@ export default function VkAutoSearch() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!keywords.trim()) {
-            alert('Введите ключевые слова');
-            return;
-        }
+        if (!keywords.trim()) return alert('Введите ключевые слова');
         setLoading(true);
         setResults([]);
         setCurrentTaskId(null);
@@ -60,92 +56,81 @@ export default function VkAutoSearch() {
         }
     };
 
-    const VK_LOGO = "https://img.freepik.com/premium-vector/social-media-logo_1305298-30571.jpg?semt=ais_hybrid&w=740&q=80";
-
     return (
-        <div style={{ marginTop: '2rem', borderTop: '1px solid #ccc', paddingTop: '2rem' }}>
-            <h2>Автоматический поиск по сообществам ВКонтакте</h2>
-            <p>По ключевому слову будут автоматически найдены группы, затем в них выполнен поиск по вашим ключевым словам.</p>
-            <form onSubmit={handleSubmit}>
-                <div>
-                    <label>Ключевые слова для поиска в постах (через запятую)</label>
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/2/21/VK.com-logo.svg" alt="VK" style={{ width: '36px', height: '36px' }} />
+                <h3 style={{ margin: 0, fontSize: '1.6rem' }}>VK Автопоиск</h3>
+            </div>
+            <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+                <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '0.95rem' }}>Ключевые слова (через запятую)</label>
                     <textarea
-                        rows="2"
+                        rows="3"
                         value={keywords}
                         onChange={e => setKeywords(e.target.value)}
-                        style={{ width: '100%' }}
-                        placeholder="например: Москва, Саранск"
+                        style={{ width: '100%', padding: '14px', borderRadius: '16px', border: '1px solid #cbd5e1', fontSize: '1rem', resize: 'vertical', boxSizing: 'border-box' }}
+                        placeholder="например: Саранск, котики"
                     />
                 </div>
-                <div style={{ marginTop: '10px', display: 'flex', gap: '20px', alignItems: 'center' }}>
-                    <div>
-                        <label>Максимальное количество групп: </label>
+                <div style={{ display: 'flex', gap: '24px', marginBottom: '24px', flexWrap: 'wrap' }}>
+                    <div style={{ flex: '1 1 180px', minWidth: '140px' }}>
+                        <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>Максимум групп</label>
                         <input
                             type="number"
                             value={maxGroups}
                             onChange={e => setMaxGroups(Number(e.target.value))}
                             min="1"
                             max="50"
-                            style={{ width: '80px' }}
+                            style={{ width: '100%', padding: '12px', borderRadius: '14px', border: '1px solid #cbd5e1', fontSize: '1rem', boxSizing: 'border-box' }}
                         />
                     </div>
-                    <div>
-                        <label>За последние N дней: </label>
+                    <div style={{ flex: '1 1 180px', minWidth: '140px' }}>
+                        <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>За последние N дней</label>
                         <input
                             type="number"
                             value={days}
                             onChange={e => setDays(Number(e.target.value))}
                             min="1"
                             max="365"
-                            style={{ width: '80px' }}
+                            style={{ width: '100%', padding: '12px', borderRadius: '14px', border: '1px solid #cbd5e1', fontSize: '1rem', boxSizing: 'border-box' }}
                         />
                     </div>
                 </div>
-                <button type="submit" disabled={loading} style={{ marginTop: '1rem' }}>
-                    {loading ? 'Поиск...' : 'Найти группы и посты'}
+                <button
+                    type="submit"
+                    disabled={loading}
+                    style={{
+                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                        border: 'none',
+                        borderRadius: '50px',
+                        padding: '14px',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '1rem',
+                        cursor: 'pointer',
+                        width: '100%'
+                    }}
+                >
+                    {loading ? 'Поиск...' : '▶ Найти группы и посты'}
                 </button>
             </form>
-
             {taskId && (
-                <div style={{ marginTop: '1rem' }}>
-                    <p>ID задачи: <code>{taskId}</code></p>
-                    <p>Прогресс: обработано {progress.processed} из {progress.total} групп, найдено совпадений: {progress.found}</p>
+                <div style={{ marginTop: '16px', background: '#f1f5f9', padding: '12px', borderRadius: '16px', fontSize: '0.85rem', overflow: 'auto' }}>
+                    <div>Задача: <code>{taskId}</code></div>
+                    <div>Прогресс: {progress.processed} / {progress.total} групп, найдено: {progress.found}</div>
                 </div>
             )}
-
             <VkAutoStatsChart taskId={currentTaskId} status={taskStatus} />
-            {taskStatus === 'completed' && <SentimentStats taskId={currentTaskId} />}
-
+            <SentimentStats taskId={currentTaskId} />
             {results.length > 0 && (
-                <div style={{ marginTop: '2rem' }}>
-                    <h3>Результаты ({results.length})</h3>
+                <div style={{ maxHeight: '500px', overflowY: 'auto', marginTop: '24px' }}>
+                    <h4 style={{ marginBottom: '12px' }}>📋 Найденные посты ({results.length})</h4>
                     {results.map((res, idx) => (
-                        <div
-                            key={idx}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '15px',
-                                borderBottom: '1px solid #ddd',
-                                marginBottom: '15px',
-                                paddingBottom: '15px'
-                            }}
-                        >
-                            <a href={res.url} target="_blank" rel="noopener noreferrer">
-                                <img
-                                    src={VK_LOGO}
-                                    alt="logo"
-                                    style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }}
-                                />
-                            </a>
-                            <div style={{ flex: 1 }}>
-                                <a href={res.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 'bold' }}>
-                                    {res.page_title || res.url}
-                                </a>
-                                <p><strong>Ключевое слово:</strong> {res.keyword}</p>
-                                <p>{res.context}</p>
-                                <p><strong>Дата публикации:</strong> {res.published_at || 'не указана'}</p>
-                            </div>
+                        <div key={idx} style={{ borderBottom: '1px solid #e2e8f0', padding: '12px 0' }}>
+                            <a href={res.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 'bold' }}>{res.page_title}</a>
+                            <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '4px' }}>{res.context}</div>
+                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '4px' }}>{res.published_at}</div>
                         </div>
                     ))}
                 </div>

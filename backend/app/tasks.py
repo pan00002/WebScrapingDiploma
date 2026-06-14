@@ -21,6 +21,7 @@ from app.sentiment_analyzer import analyze_sentiment
 from app.ok_preset_urls import PRESET_URLS
 from app.ok_client import scrape_ok_group
 from app.rss_client import search_rss
+from app.crawler import crawl_and_search
 
 logger = logging.getLogger(__name__)
 
@@ -489,6 +490,21 @@ async def run_unified_search_task(task_id: str, keywords: list, days: int = None
             if all_matches:
                 await crud.add_matches(db, task_id, all_matches)
 
+            await crud.update_task_status(db, task_id, "completed")
+        except Exception as e:
+            await crud.update_task_status(db, task_id, "failed", str(e))
+
+async def run_crawler_task(task_id: str, keywords: list, start_urls: list, max_depth: int = 2, max_pages: int = 50):
+    """Фоновая задача для краулера – рекурсивный обход страниц."""
+    from app.database import AsyncSessionLocal
+    from app import crud
+
+    async with AsyncSessionLocal() as db:
+        try:
+            await crud.update_task_status(db, task_id, "running")
+            matches = await crawl_and_search(start_urls, keywords, max_depth, max_pages)
+            if matches:
+                await crud.add_matches(db, task_id, matches)
             await crud.update_task_status(db, task_id, "completed")
         except Exception as e:
             await crud.update_task_status(db, task_id, "failed", str(e))

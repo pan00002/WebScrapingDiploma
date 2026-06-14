@@ -56,6 +56,12 @@ async def scrape_site(url: str, keywords: List[str], window: int) -> List[dict]:
             })
     return results
 
+async def fetch_page_text_httpx(url: str, timeout: int = 10) -> str:
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+        resp = await client.get(url, headers=headers)
+        resp.raise_for_status()
+        return resp.text
 
 async def fetch_page_text_ok(url: str, timeout: int = 10) -> Optional[str]:
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}

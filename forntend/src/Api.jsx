@@ -122,3 +122,12 @@ export const unifiedSearch = async (keywords, days = 7) => {
     });
     return response.data;
 };
+
+export const crawlerSearch = async (keywords, startUrls, maxDepth = 2, maxPages = 50) => {
+    const response = await axios.post(`${API_BASE}/crawler_search`, {
+        keywords: keywords.split(',').map(k => k.trim()).filter(k => k),
+        sites: startUrls.split('\n').map(s => s.trim()).filter(s => s),
+        config: { max_depth: maxDepth, max_pages: maxPages }
+    });
+    return response.data;
+};

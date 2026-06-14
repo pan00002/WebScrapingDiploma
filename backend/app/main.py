@@ -1,5 +1,6 @@
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from .database import AsyncSessionLocal, init_db
 from . import schemas, crud, tasks
@@ -9,6 +10,11 @@ from app.tasks import run_ok_auto_search_task
 from app.tasks import run_youtube_search_task
 from app.tasks import run_ok_preset_search_task
 from app.tasks import run_rss_search_task
+import csv
+from io import StringIO
+from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
+from app.tasks import run_crawler_task
 
 app = FastAPI(title="Web Scraper API")
 
@@ -175,4 +181,53 @@ async def unified_search(request: schemas.SearchRequest, background_tasks: Backg
     days = request.config.get("days", 7) if request.config else 7
     task = await crud.create_task(db, request.keywords, [], request.config or {})
     background_tasks.add_task(tasks.run_unified_search_task, task.id, request.keywords, days)
+    return schemas.TaskResponse(task_id=task.id, status=task.status, created_at=task.created_at)
+
+
+@app.get("/api/export/csv/{task_id}")
+async def export_csv(task_id: str, db: AsyncSession = Depends(get_db)):
+    # 1. Получаем задачу
+    task = await crud.get_task(db, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # 2. Получаем все сохранённые совпадения (matches) для этой задачи
+    matches = await crud.get_matches(db, task_id)
+    if not matches:
+        raise HTTPException(status_code=404, detail="No matches found for this task")
+
+    # 3. Формируем CSV в строку
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["URL", "Ключевое слово", "Контекст", "Заголовок", "Дата публикации", "Тональность", "Источник"])
+
+    for m in matches:
+        writer.writerow([
+            m.url,
+            m.keyword,
+            m.context,
+            m.page_title or "",
+            m.published_at or "",
+            m.sentiment or "",
+            m.source or ""
+        ])
+
+    output.seek(0)
+    content = output.getvalue().encode('utf-8-sig')  # UTF-8 с BOM для корректного отображения в Excel
+
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename=task_{task_id}.csv"}
+    )
+
+@app.post("/api/crawler_search", response_model=schemas.TaskResponse)
+async def crawler_search(request: schemas.SearchRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    config = request.config or {}
+    max_depth = config.get("max_depth", 2)
+    max_pages = config.get("max_pages", 50)
+    # ВАЖНО: в request.sites передаются стартовые URL (они же start_urls)
+    start_urls = request.sites
+    task = await crud.create_task(db, request.keywords, start_urls, config)
+    background_tasks.add_task(run_crawler_task, task.id, request.keywords, start_urls, max_depth, max_pages)
     return schemas.TaskResponse(task_id=task.id, status=task.status, created_at=task.created_at)

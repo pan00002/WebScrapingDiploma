@@ -1,4 +1,3 @@
-// frontend/src/OkPresetSearch.js
 import React, { useState } from 'react';
 import { okPresetSearch, getTaskStatus } from './api';
 
@@ -34,10 +33,7 @@ export default function OkPresetSearch() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!keywords.trim()) {
-            alert('Введите ключевые слова');
-            return;
-        }
+        if (!keywords.trim()) return alert('Введите ключевые слова');
         setLoading(true);
         setResults([]);
         try {
@@ -46,50 +42,71 @@ export default function OkPresetSearch() {
             startPolling(task.task_id);
         } catch (err) {
             console.error(err);
-            alert('Ошибка запуска поиска');
+            alert('Ошибка запуска поиска OK');
             setLoading(false);
         }
     };
 
-    const OK_LOGO = "https://ok.ru/static/img/logo.png";
-
     return (
-        <div style={{ marginTop: '2rem', borderTop: '1px solid #ccc', paddingTop: '2rem' }}>
-            <h2>Поиск по предустановленным группам Одноклассников</h2>
-            <p>Поиск выполняется в фиксированном списке из 50+ групп (Саранск, Мордовия, птицы, котики, новости).</p>
-            <form onSubmit={handleSubmit}>
-                <div>
-                    <label>Ключевые слова (через запятую)</label>
-                    <textarea rows="2" value={keywords} onChange={e => setKeywords(e.target.value)} style={{ width: '100%' }} placeholder="например: Саранск, котики" />
+        <div style={{ width: '100%', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                <img src="https://avatars.mds.yandex.net/i?id=45c71577aa2da46fd2e617ecad7540c2800134ed-9224110-images-thumbs&n=13" alt="OK" style={{ width: '36px', height: '36px' }} />
+                <h3 style={{ margin: 0, fontSize: '1.6rem' }}>Поиск по ОК </h3>
+            </div>
+            <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+                <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Ключевые слова (через запятую)</label>
+                    <textarea
+                        rows="3"
+                        value={keywords}
+                        onChange={e => setKeywords(e.target.value)}
+                        style={{ width: '100%', padding: '14px', borderRadius: '16px', border: '1px solid #cbd5e1', fontSize: '1rem', resize: 'vertical', boxSizing: 'border-box' }}
+                        placeholder="например: работа, Саранск"
+                    />
                 </div>
-                <div style={{ marginTop: '10px' }}>
-                    <label>За последние N дней: </label>
-                    <input type="number" value={days} onChange={e => setDays(Number(e.target.value))} min="1" max="365" style={{ width: '80px' }} />
+                <div style={{ marginBottom: '24px' }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>За последние N дней</label>
+                    <input
+                        type="number"
+                        value={days}
+                        onChange={e => setDays(Number(e.target.value))}
+                        min="1"
+                        max="365"
+                        style={{ width: '100%', padding: '12px', borderRadius: '14px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+                    />
                 </div>
-                <button type="submit" disabled={loading} style={{ marginTop: '1rem' }}>
-                    {loading ? 'Поиск...' : 'Искать в предустановленных группах'}
+                <button
+                    type="submit"
+                    disabled={loading}
+                    style={{
+                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                        border: 'none',
+                        borderRadius: '50px',
+                        padding: '14px',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '1rem',
+                        cursor: 'pointer',
+                        width: '100%'
+                    }}
+                >
+                    {loading ? 'Поиск...' : '▶ Искать в группах OK'}
                 </button>
             </form>
-
             {taskId && (
-                <div style={{ marginTop: '1rem' }}>
-                    <p>ID задачи: <code>{taskId}</code></p>
-                    <p>Прогресс: обработано {progress.processed} из {progress.total} групп, найдено совпадений: {progress.found}</p>
+                <div style={{ marginTop: '16px', background: '#f1f5f9', padding: '12px', borderRadius: '16px', overflow: 'auto' }}>
+                    <div>Задача: <code>{taskId}</code></div>
+                    <div>Найдено совпадений: {progress.found}</div>
                 </div>
             )}
-
             {results.length > 0 && (
-                <div style={{ marginTop: '2rem' }}>
-                    <h3>Результаты ({results.length})</h3>
+                <div style={{ maxHeight: '500px', overflowY: 'auto', marginTop: '24px' }}>
+                    <h4>📋 Результаты ({results.length})</h4>
                     {results.map((res, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '15px', borderBottom: '1px solid #ddd', marginBottom: '15px', paddingBottom: '15px' }}>
-                            <img src={OK_LOGO} alt="OK" style={{ width: '40px', height: '40px' }} />
-                            <div>
-                                <a href={res.url} target="_blank" rel="noopener noreferrer"><strong>{res.page_title}</strong></a>
-                                <p><strong>Ключевое слово:</strong> {res.keyword}</p>
-                                <p>{res.context}</p>
-                                <p><strong>Дата:</strong> {res.published_at || 'не указана'}</p>
-                            </div>
+                        <div key={idx} style={{ borderBottom: '1px solid #e2e8f0', padding: '12px 0' }}>
+                            <a href={res.url} target="_blank" rel="noopener noreferrer"><strong>{res.page_title}</strong></a>
+                            <div style={{ fontSize: '0.85rem', color: '#475569' }}>{res.context}</div>
+                            <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{res.published_at}</div>
                         </div>
                     ))}
                 </div>
